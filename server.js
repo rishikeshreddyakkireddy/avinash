@@ -16,18 +16,31 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// API versioning middleware - adds version info to response
-app.use((req, res, next) => {
+// API versioning - v1 routes
+const v1Routes = express.Router();
+
+// v1 middleware - sets version header
+v1Routes.use((req, res, next) => {
   res.setHeader('X-API-Version', 'v1');
   next();
 });
 
-// API versioning - v1 routes
-const v1Routes = express.Router();
 v1Routes.use('/items', require('./routes/items'));
+
+// API versioning - v2 routes
+const v2Routes = express.Router();
+
+// v2 middleware - sets version header
+v2Routes.use((req, res, next) => {
+  res.setHeader('X-API-Version', 'v2');
+  next();
+});
+
+v2Routes.use('/items', require('./routes/items-v2'));
 
 // Mount versioned routes
 app.use('/api/v1', v1Routes);
+app.use('/api/v2', v2Routes);
 
 // Health check route
 app.get('/health', (req, res) => {
@@ -44,11 +57,27 @@ app.get('/', (req, res) => {
   res.status(200).json({
     success: true,
     message: 'Welcome to the API',
-    version: 'v1',
-    endpoints: {
-      health: '/health',
-      items: '/api/v1/items'
-    }
+    versions: {
+      v1: {
+        status: 'stable',
+        endpoints: {
+          items: '/api/v1/items'
+        }
+      },
+      v2: {
+        status: 'latest',
+        endpoints: {
+          items: '/api/v2/items'
+        },
+        enhancements: [
+          'Enhanced response metadata',
+          'Soft delete support (?soft=true)',
+          'Item value calculations',
+          'Notification hooks'
+        ]
+      }
+    },
+    health: '/health'
   });
 });
 
